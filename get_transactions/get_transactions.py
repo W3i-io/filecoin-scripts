@@ -51,7 +51,7 @@ print (datetime.now(),"- Starting...")
 print(datetime.now(),"- Reading configuration file")
 # read the config file
 config = configparser.ConfigParser()
-configFilePath = r'c:\temp\get_transactions.conf'
+configFilePath = r'./get_transactions.conf'
 config.read(configFilePath)
 
 
