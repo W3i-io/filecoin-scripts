@@ -10,6 +10,7 @@ import json
 import math
 import sys
 from colorama import Fore
+from requests.exceptions import ChunkedEncodingError, ConnectionError, Timeout
 
 # Define constants
 filecoin_genesis_timestamp = 1598306400
@@ -20,14 +21,12 @@ update_count = 0
 
 # Function to make API calls to Filfox with different call types
 def filfox_api_call(call_type, *param):
-    # Set up headers for the API request
     headers = {
         'X-API-KEY': config["filfox"]["apikey"],
         'Content-Type': 'application/json'
     }
     payload = {}
 
-    # Determine the API request URL based on the call type
     if call_type == "get_actor_info":
         api_request = 'https://filfox.info/api/v1/address/' + str(param[0])
     elif call_type == "get_tipset_info":
@@ -39,18 +38,35 @@ def filfox_api_call(call_type, *param):
     elif call_type == "get_message":
         api_request = 'https://filfox.info/api/v1/message/' + str(param[0])
 
-    # Make the API request and handle retries if the response status is not 200
-    response = requests.request("GET", api_request, headers=headers, data=payload)
-    if response is not None:
-        while response.status_code != 200:
-            print("Filfox API error:" + str(response.status_code))
-            print("will try again in 20 seconds")
-            time.sleep(20)
-            response = requests.request("GET", api_request, headers=headers, data=payload)
+    retries = 5
+    backoff_factor = 1
+    timeout = 10  # seconds
 
-        return json.loads(response.text)
-    else:
-        return None
+    for attempt in range(retries):
+        try:
+            response = requests.request("GET", api_request, headers=headers, data=payload, timeout=timeout)
+            response.raise_for_status()
+            return json.loads(response.text)
+        except (ChunkedEncodingError, ConnectionError, Timeout) as e:
+            print(f"Error occurred: {e}")
+            if attempt < retries - 1:
+                sleep_time = backoff_factor * (2 ** attempt)
+                print(f"Retrying in {sleep_time} seconds...")
+                time.sleep(sleep_time)
+            else:
+                print("Maximum retries reached. Exiting.")
+                return None
+        except requests.exceptions.HTTPError as err:
+            print(f"HTTP error occurred: {err}")
+            if response.status_code != 200:
+                print("Filfox API error:" + str(response.status_code))
+                print("will try again in 20 seconds")
+                time.sleep(20)
+            else:
+                return json.loads(response.text)
+        except Exception as e:
+            print(f"Unexpected error occurred: {e}")
+            return None
 
 print(datetime.now(), "- Starting...")
 
