@@ -45,9 +45,6 @@ response = requests.request("GET", url, headers=headers, data=payload)
 # Parse the JSON response
 data = json.loads(response.text)
 
-# Print the received data for debugging purposes
-print(data)
-
 # Query to check if the reward for the specific date already exists in the database
 query = (
     "SELECT * FROM BlockRewards WHERE RewardDate='" +
