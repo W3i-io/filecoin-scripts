@@ -11,6 +11,7 @@ import math
 import sys
 from colorama import Fore
 from requests.exceptions import ChunkedEncodingError, ConnectionError, Timeout
+from json.decoder import JSONDecodeError
 
 # Define constants
 filecoin_genesis_timestamp = 1598306400
@@ -20,6 +21,8 @@ page_size = 50
 update_count = 0
 
 # Function to make API calls to Filfox with different call types
+
+
 def filfox_api_call(call_type, *param):
     headers = {
         'X-API-KEY': config["filfox"]["apikey"],
@@ -46,7 +49,17 @@ def filfox_api_call(call_type, *param):
         try:
             response = requests.request("GET", api_request, headers=headers, data=payload, timeout=timeout)
             response.raise_for_status()
-            return json.loads(response.text)
+            try:
+                return json.loads(response.text)
+            except JSONDecodeError as e:
+                print(f"JSON decode error: {e}")
+                if attempt < retries - 1:
+                    sleep_time = backoff_factor * (2 ** attempt)
+                    print(f"Retrying in {sleep_time} seconds due to JSON error...")
+                    time.sleep(sleep_time)
+                else:
+                    print("Maximum retries reached due to JSON decode error. Exiting.")
+                    return None
         except (ChunkedEncodingError, ConnectionError, Timeout) as e:
             print(f"Error occurred: {e}")
             if attempt < retries - 1:
@@ -63,10 +76,11 @@ def filfox_api_call(call_type, *param):
                 print("will try again in 20 seconds")
                 time.sleep(20)
             else:
-                return json.loads(response.text)
+                return None
         except Exception as e:
             print(f"Unexpected error occurred: {e}")
             return None
+        
 
 print(datetime.now(), "- Starting...")
 
