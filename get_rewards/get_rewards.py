@@ -42,7 +42,7 @@ def reward_exists(cursor, reward_date):
     return cursor.fetchone() is not None
 
 def insert_reward(cursor, reward_date, reward_per_wincount):
-    query = "INSERT INTO BlockRewards (RewardDate, RewardPerWinCount) VALUES (?, ?)"
+    query = "INSERT INTO BlockRewards (RewardDate, BlockReward) VALUES (?, ?)"
     cursor.execute(query, reward_date, reward_per_wincount)
 
 def main():
