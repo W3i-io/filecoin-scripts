@@ -46,7 +46,7 @@ def insert_reward(cursor, reward_date, reward_per_wincount):
     cursor.execute(query, reward_date, reward_per_wincount)
 
 def main():
-    config_file_path = './get_rewards.conf'
+    config_file_path = '/usr/local/bin/get_rewards.conf'
     config = read_config(config_file_path)
     check_date = get_check_date()
     
