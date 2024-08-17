@@ -17,7 +17,7 @@ ORIGIN = datetime(1970, 1, 1, 0, 0, 0)
 CONFIG_FILE_PATH = './get_transactions.conf'
 PAGE_SIZE = 50
 
-def filfox_api_call(call_type, *param):
+def filfox_api_call(config, call_type, *param):
     headers = {
         'X-API-KEY': config["filfox"]["apikey"],
         'Content-Type': 'application/json'
@@ -99,12 +99,12 @@ def main():
 
         if account.IsMiner:
             print(Fore.YELLOW + 'Account is a miner, checking for block rewards')
-            miner_info = filfox_api_call("get_actor_info", account.ActorID)
+            miner_info = filfox_api_call(config,"get_actor_info", account.ActorID)
             last_seen_height = miner_info["lastSeenHeight"]
             last_epoch_check_rewards = account.LastEpochCheckRewards
             if last_seen_height > last_epoch_check_rewards:
                 while last_epoch_check_rewards < last_seen_height:
-                    epochs = filfox_api_call("get_tipset_info", last_epoch_check_rewards)
+                    epochs = filfox_api_call(config,"get_tipset_info", last_epoch_check_rewards)
                     print(Fore.WHITE + str(last_epoch_check_rewards))
                     for reward in epochs["blocks"]:
                         if reward["miner"] == account.ActorID:
@@ -123,7 +123,7 @@ def main():
                     cursor.execute(update_query)
                     cnxn.commit()
 
-        messages = filfox_api_call("get_all_messages", account.ActorID)
+        messages = filfox_api_call(config,"get_all_messages", account.ActorID)
         print(Fore.WHITE + "Checking for new messages")
         if account.CheckAllMessages:
             num_processed_pages = 0
@@ -142,7 +142,7 @@ def main():
             print(Fore.WHITE + f"Number of pages to be processed: {list(num_pages)}")
             for page_number in num_pages:
                 print(Fore.MAGENTA + f"Processing page: {num_processed_pages + page_number}/{total_num_pages} (Account: {account.ActorID})")
-                messages_page = filfox_api_call("get_messages_page", account.ActorID, page_number, PAGE_SIZE)
+                messages_page = filfox_api_call(config,"get_messages_page", account.ActorID, page_number, PAGE_SIZE)
                 if messages_page is None:
                     print(Fore.RED + "Error fetching messages page")
                     continue
@@ -152,7 +152,7 @@ def main():
                     check_message_exists = cursor.fetchone()
                     if check_message_exists is None:
                         print(Fore.YELLOW + f"Adding message to database: {account.ActorID} - {message['cid']}")
-                        transaction = filfox_api_call("get_message", message["cid"])
+                        transaction = filfox_api_call(config,"get_message", message["cid"])
                         if transaction is not None:
                             if "transfers" in transaction:
                                 for transfer in transaction["transfers"]:
